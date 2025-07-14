@@ -185,32 +185,33 @@ const LaTeXEditor: React.FC<LaTeXEditorProps> = ({ value, onChange, placeholder 
                 </div>
               </div>
 
-              {/* Advanced Math */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3">Advanced Math</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <code>\sum_{i=1}^{n}</code>
-                    <span>Summation</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\int_{a}^{b}</code>
-                    <span>Integral</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\\lim_{{x \\to 0}}</code>
-                    <span>Limit</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\partial</code>
-                    <span>Partial derivative</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\infty</code>
-                    <span>Infinity: ∞</span>
-                  </div>
-                </div>
-              </div>
+             {/* Advanced Math */}
+<div>
+  <h4 className="font-semibold text-gray-900 mb-3">Advanced Math</h4>
+  <div className="space-y-2 text-sm">
+    <div className="flex justify-between">
+      <code>\sum_{"{i=1}"}^{"{n}"}</code>
+      <span>Summation</span>
+    </div>
+    <div className="flex justify-between">
+      <code>\int_{"{a}"}^{"{b}"}</code>
+      <span>Integral</span>
+    </div>
+    <div className="flex justify-between">
+      <code>\lim_{"{x \\to 0}"}</code>
+      <span>Limit</span>
+    </div>
+    <div className="flex justify-between">
+      <code>\partial</code>
+      <span>Partial derivative</span>
+    </div>
+    <div className="flex justify-between">
+      <code>\infty</code>
+      <span>Infinity: ∞</span>
+    </div>
+  </div>
+</div>
+
 
               {/* Greek Letters */}
               <div>
