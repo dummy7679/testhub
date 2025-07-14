@@ -143,23 +143,18 @@ const TeacherLogin: React.FC = () => {
                 disabled={loading}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
               >
-                {loading ? (isSignUp ? 'Creating Account...' : 'Signing in...') : (isSignUp ? 'Create Account' : 'Sign In')}
+                {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
 
-            {/* Toggle Sign Up/Sign In */}
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError('');
-                }}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
-              </button>
+            {/* Admin Note */}
+            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Note:</strong> Teacher accounts are created by administration. 
+                Contact your admin if you need access.
+              </p>
             </div>
+            
             {/* Demo Info */}
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-800">
