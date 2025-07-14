@@ -1,77 +1,75 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, Search, Filter, Upload } from 'lucide-react';
 import SOSELogo from '../../components/SOSELogo';
+import PDFImporter from '../../components/PDFImporter';
+import LaTeXEditor from '../../components/LaTeXEditor';
+import { useTeacher } from '../../contexts/TeacherContext';
+import { database } from '../../lib/database';
+import type { ImportedQuestion } from '../../lib/pdfImporter';
 
 const QuestionBank: React.FC = () => {
   const navigate = useNavigate();
+  const { teacher } = useTeacher();
   const [questions, setQuestions] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterSubject, setFilterSubject] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const [newQuestion, setNewQuestion] = useState({
+    question: '',
+    type: 'mcq' as 'mcq' | 'short' | 'essay',
+    subject: '',
+    topic: '',
+    difficulty: 'Medium' as 'Easy' | 'Medium' | 'Hard',
+    options: ['', '', '', ''],
+    correct_answer: '',
+    marks: 1
+  });
 
   useEffect(() => {
-    // Mock questions data
-    const mockQuestions = [
-      {
-        id: 1,
-        question: 'What is the value of x in the equation 2x + 5 = 15?',
-        type: 'mcq',
-        subject: 'Mathematics',
-        topic: 'Algebra',
-        difficulty: 'Easy',
-        options: ['3', '5', '10', '15'],
-        correctAnswer: '5',
-        marks: 2,
-        createdAt: '2025-01-15T10:00:00Z'
-      },
-      {
-        id: 2,
-        question: 'Which of the following is a prime number?',
-        type: 'mcq',
-        subject: 'Mathematics',
-        topic: 'Number Theory',
-        difficulty: 'Easy',
-        options: ['4', '6', '9', '11'],
-        correctAnswer: '11',
-        marks: 2,
-        createdAt: '2025-01-15T10:30:00Z'
-      },
-      {
-        id: 3,
-        question: 'Solve for y: 3y - 7 = 14. Show your work.',
-        type: 'short',
-        subject: 'Mathematics',
-        topic: 'Algebra',
-        difficulty: 'Medium',
-        marks: 3,
-        createdAt: '2025-01-15T11:00:00Z'
-      },
-      {
-        id: 4,
-        question: 'What is photosynthesis and why is it important for life on Earth?',
-        type: 'short',
-        subject: 'Science',
-        topic: 'Biology',
-        difficulty: 'Medium',
-        marks: 4,
-        createdAt: '2025-01-15T11:30:00Z'
-      },
-      {
-        id: 5,
-        question: 'Explain the Pythagorean theorem and provide an example of its application in real life.',
-        type: 'essay',
-        subject: 'Mathematics',
-        topic: 'Geometry',
-        difficulty: 'Hard',
-        marks: 5,
-        createdAt: '2025-01-15T12:00:00Z'
-      }
-    ];
-    setQuestions(mockQuestions);
-  }, []);
+    if (teacher) {
+      loadQuestions();
+    }
+  }, [teacher]);
+
+  const loadQuestions = async () => {
+    try {
+      if (!teacher) return;
+      const teacherQuestions = await database.getTeacherQuestions(teacher.id);
+      setQuestions(teacherQuestions);
+    } catch (error) {
+      console.error('Failed to load questions:', error);
+      // Fallback to mock data for demo
+      const mockQuestions = [
+        {
+          id: 1,
+          question: 'What is the value of $x$ in the equation $2x + 5 = 15$?',
+          type: 'mcq',
+          subject: 'Mathematics',
+          topic: 'Algebra',
+          difficulty: 'Easy',
+          options: ['3', '5', '10', '15'],
+          correct_answer: '5',
+          marks: 2,
+          created_at: '2025-01-15T10:00:00Z'
+        },
+        {
+          id: 2,
+          question: 'Calculate $\\int_{0}^{1} x^2 dx$',
+          type: 'short',
+          subject: 'Mathematics',
+          topic: 'Calculus',
+          difficulty: 'Medium',
+          marks: 3,
+          created_at: '2025-01-15T11:00:00Z'
+        }
+      ];
+      setQuestions(mockQuestions);
+    }
+  };
 
   const filteredQuestions = questions.filter(q => {
     const matchesSearch = q.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -80,6 +78,62 @@ const QuestionBank: React.FC = () => {
     const matchesSubject = filterSubject === 'all' || q.subject === filterSubject;
     return matchesSearch && matchesType && matchesSubject;
   });
+
+  const handleImportQuestions = async (importedQuestions: ImportedQuestion[]) => {
+    try {
+      if (!teacher) return;
+      
+      for (const question of importedQuestions) {
+        await database.addQuestion({
+          teacher_id: teacher.id,
+          ...question
+        });
+      }
+      
+      // Reload questions
+      await loadQuestions();
+      alert(`Successfully imported ${importedQuestions.length} questions!`);
+    } catch (error) {
+      console.error('Failed to import questions:', error);
+      alert('Failed to import questions. Please try again.');
+    }
+  };
+
+  const handleAddQuestion = async () => {
+    try {
+      if (!teacher) return;
+      
+      await database.addQuestion({
+        teacher_id: teacher.id,
+        question: newQuestion.question,
+        type: newQuestion.type,
+        subject: newQuestion.subject,
+        topic: newQuestion.topic,
+        difficulty: newQuestion.difficulty,
+        options: newQuestion.type === 'mcq' ? newQuestion.options : undefined,
+        correct_answer: newQuestion.type === 'mcq' ? newQuestion.correct_answer : undefined,
+        marks: newQuestion.marks
+      });
+      
+      // Reset form and reload
+      setNewQuestion({
+        question: '',
+        type: 'mcq',
+        subject: '',
+        topic: '',
+        difficulty: 'Medium',
+        options: ['', '', '', ''],
+        correct_answer: '',
+        marks: 1
+      });
+      setShowAddModal(false);
+      await loadQuestions();
+      alert('Question added successfully!');
+    } catch (error) {
+      console.error('Failed to add question:', error);
+      alert('Failed to add question. Please try again.');
+    }
+  };
 
   const handleDeleteQuestion = (id: number) => {
     if (window.confirm('Are you sure you want to delete this question?')) {
@@ -141,6 +195,14 @@ const QuestionBank: React.FC = () => {
             >
               <Plus className="h-4 w-4" />
               <span>Add Question</span>
+            </button>
+            
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Upload className="h-4 w-4" />
+              <span>Import from PDF</span>
             </button>
           </div>
         </div>
@@ -262,7 +324,7 @@ const QuestionBank: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2">
                           {question.options.map((option: string, index: number) => (
                             <div key={index} className={`p-2 rounded text-sm ${
-                              option === question.correctAnswer 
+                              option === question.correct_answer 
                                 ? 'bg-green-100 text-green-800' 
                                 : 'bg-gray-100 text-gray-700'
                             }`}>
@@ -274,7 +336,7 @@ const QuestionBank: React.FC = () => {
                     )}
                     
                     <div className="mt-3 text-xs text-gray-500">
-                      Created: {new Date(question.createdAt).toLocaleDateString()}
+                      Created: {new Date(question.created_at).toLocaleDateString()}
                     </div>
                   </div>
                   
@@ -297,6 +359,161 @@ const QuestionBank: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* Add Question Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Add New Question</h3>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Subject
+                    </label>
+                    <input
+                      type="text"
+                      value={newQuestion.subject}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, subject: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="e.g., Mathematics"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Topic
+                    </label>
+                    <input
+                      type="text"
+                      value={newQuestion.topic}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, topic: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="e.g., Algebra"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Type
+                    </label>
+                    <select
+                      value={newQuestion.type}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, type: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="mcq">Multiple Choice</option>
+                      <option value="short">Short Answer</option>
+                      <option value="essay">Essay</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Difficulty
+                    </label>
+                    <select
+                      value={newQuestion.difficulty}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, difficulty: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="Easy">Easy</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Hard">Hard</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Marks
+                    </label>
+                    <input
+                      type="number"
+                      value={newQuestion.marks}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, marks: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      min="1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Question (LaTeX supported)
+                  </label>
+                  <LaTeXEditor
+                    value={newQuestion.question}
+                    onChange={(value) => setNewQuestion({ ...newQuestion, question: value })}
+                    placeholder="Enter your question with LaTeX math: $x^2 + y^2 = z^2$"
+                  />
+                </div>
+
+                {newQuestion.type === 'mcq' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Options
+                    </label>
+                    <div className="space-y-2">
+                      {newQuestion.options.map((option, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name="correct-answer"
+                            checked={newQuestion.correct_answer === option}
+                            onChange={() => setNewQuestion({ ...newQuestion, correct_answer: option })}
+                            className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                          />
+                          <input
+                            type="text"
+                            value={option}
+                            onChange={(e) => {
+                              const newOptions = [...newQuestion.options];
+                              newOptions[index] = e.target.value;
+                              setNewQuestion({ ...newQuestion, options: newOptions });
+                            }}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder={`Option ${index + 1}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end space-x-4">
+                  <button
+                    onClick={() => setShowAddModal(false)}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddQuestion}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Add Question
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PDF Import Modal */}
+        {showImportModal && (
+          <PDFImporter
+            onImport={handleImportQuestions}
+            onClose={() => setShowImportModal(false)}
+          />
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,27 @@
 import React from 'react';
 
+// Load MathJax for LaTeX rendering
+if (typeof window !== 'undefined' && !window.MathJax) {
+  const script = document.createElement('script');
+  script.src = 'https://polyfill.io/v3/polyfill.min.js?features=es6';
+  document.head.appendChild(script);
+
+  const mathJaxScript = document.createElement('script');
+  mathJaxScript.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+  mathJaxScript.async = true;
+  document.head.appendChild(mathJaxScript);
+
+  window.MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      displayMath: [['$$', '$$'], ['\\[', '\\]']]
+    },
+    options: {
+      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+    }
+  };
+}
+
 interface Question {
   id: string;
   type: 'mcq' | 'short' | 'essay';
@@ -22,6 +44,13 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   onChange,
   questionNumber
 }) => {
+  // Trigger MathJax rendering after component updates
+  React.useEffect(() => {
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise();
+    }
+  }, [question.question]);
+
   const renderMCQ = () => (
     <div className="space-y-3">
       {question.options?.map((option, index) => (
@@ -34,7 +63,10 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
             onChange={(e) => onChange(e.target.value)}
             className="w-4 h-4 text-blue-600 focus:ring-blue-500"
           />
-          <span className="text-gray-700">{option}</span>
+          <span 
+            className="text-gray-700"
+            dangerouslySetInnerHTML={{ __html: option }}
+          />
         </label>
       ))}
     </div>
@@ -70,7 +102,10 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
       </div>
       
       <div className="mb-6">
-        <p className="text-gray-700 leading-relaxed">{question.question}</p>
+        <div 
+          className="text-gray-700 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: question.question }}
+        />
       </div>
 
       <div className="space-y-4">

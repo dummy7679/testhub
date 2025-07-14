@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Eye } from 'lucide-react';
 import SOSELogo from '../../components/SOSELogo';
+import LaTeXEditor from '../../components/LaTeXEditor';
 import { useTeacher } from '../../contexts/TeacherContext';
 import { database } from '../../lib/database';
 
@@ -380,12 +381,10 @@ const CreateTest: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Question Text
                     </label>
-                    <textarea
+                    <LaTeXEditor
                       value={currentQuestion.question}
-                      onChange={(e) => updateQuestion(activeQuestion, 'question', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
+                      onChange={(value) => updateQuestion(activeQuestion, 'question', value)}
                       placeholder="Enter your question here..."
-                      required
                     />
                   </div>
 
