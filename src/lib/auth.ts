@@ -2,33 +2,6 @@ import { supabase } from './supabase';
 import type { Teacher } from './supabase';
 
 export const teacherAuth = {
-  async signUp(email: string, password: string, teacherData: Omit<Teacher, 'id' | 'created_at'>) {
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (authError) throw authError;
-
-    if (authData.user) {
-      const { data, error } = await supabase
-        .from('teachers')
-        .insert([
-          {
-            id: authData.user.id,
-            ...teacherData,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { user: authData.user, teacher: data };
-    }
-
-    throw new Error('Failed to create user');
-  },
-
   async signIn(email: string, password: string) {
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
