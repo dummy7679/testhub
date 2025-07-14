@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Eye } from 'lucide-react';
 import SOSELogo from '../../components/SOSELogo';
+import { useTeacher } from '../../contexts/TeacherContext';
+import { database } from '../../lib/database';
 
 const CreateTest: React.FC = () => {
   const navigate = useNavigate();
+  const { teacher } = useTeacher();
   const [testData, setTestData] = useState({
     title: '',
     subject: '',
@@ -33,6 +36,8 @@ const CreateTest: React.FC = () => {
   ]);
 
   const [activeQuestion, setActiveQuestion] = useState(0);
+
+  const [saving, setSaving] = useState(false);
 
   const addQuestion = () => {
     const newQuestion = {
@@ -67,62 +72,88 @@ const CreateTest: React.FC = () => {
     setQuestions(newQuestions);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate form
-    if (!testData.title.trim()) {
-      alert('Please enter a test title');
-      return;
-    }
-    
-    if (questions.some(q => !q.question.trim())) {
-      alert('Please fill in all question fields');
-      return;
-    }
-    
-    if (questions.some(q => q.type === 'mcq' && (!q.correctAnswer || q.options.some(opt => !opt.trim())))) {
-      alert('Please complete all MCQ options and select correct answers');
-      return;
-    }
-    
-    // Mock save - in real app, save to Supabase
-    const testCode = Math.random().toString(36).substr(2, 9).toUpperCase();
-    
-    const newTest = {
-      ...testData,
-      testCode,
-      questions,
-      createdAt: new Date().toISOString()
-    };
+    setError('');
+    setSaving(true);
 
-    // Save to localStorage for demo
-    const existingTests = JSON.parse(localStorage.getItem('tests') || '[]');
-    existingTests.push(newTest);
-    localStorage.setItem('tests', JSON.stringify(existingTests));
-
-    // Show success message with better UX
-    const successDiv = document.createElement('div');
-    successDiv.innerHTML = `
-      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-6 rounded-lg shadow-lg max-w-md">
-          <h3 class="text-lg font-bold text-green-600 mb-2">✅ Test Created Successfully!</h3>
-          <p class="text-gray-700 mb-4">Test Code: <strong class="text-blue-600">${testCode}</strong></p>
-          <button onclick="this.parentElement.parentElement.remove()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-            Continue
-          </button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(successDiv);
-    
-    setTimeout(() => {
-      if (successDiv.parentElement) {
-        successDiv.remove();
+    try {
+      if (!teacher) {
+        throw new Error('You must be logged in to create a test');
       }
-    }, 5000);
-    
-    navigate('/teacher/tests');
+
+      // Validate form
+      if (!testData.title.trim()) {
+        throw new Error('Please enter a test title');
+      }
+      
+      if (questions.some(q => !q.question.trim())) {
+        throw new Error('Please fill in all question fields');
+      }
+      
+      if (questions.some(q => q.type === 'mcq' && (!q.correctAnswer || q.options.some(opt => !opt.trim())))) {
+        throw new Error('Please complete all MCQ options and select correct answers');
+      }
+      
+      // Generate unique test code
+      const testCode = Math.random().toString(36).substr(2, 9).toUpperCase();
+      
+      // Prepare test data for database
+      const newTestData = {
+        teacher_id: teacher.id,
+        ...testData,
+        testCode,
+        test_code: testCode,
+        questions: questions.map(q => ({
+          id: q.id.toString(),
+          type: q.type,
+          question: q.question,
+          options: q.options,
+          correct_answer: q.correctAnswer,
+          marks: q.marks
+        })),
+        settings: {
+          showAnswerKey: testData.showAnswerKey,
+          showTimer: testData.showTimer,
+          randomizeQuestions: testData.randomizeQuestions,
+          maxAttempts: testData.maxAttempts,
+          startDate: testData.startDate,
+          startTime: testData.startTime,
+          endDate: testData.endDate,
+          endTime: testData.endTime
+        }
+      };
+
+      // Save to database
+      await database.createTest(newTestData);
+
+      // Show success message with better UX
+      const successDiv = document.createElement('div');
+      successDiv.innerHTML = `
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white p-6 rounded-lg shadow-lg max-w-md">
+            <h3 class="text-lg font-bold text-green-600 mb-2">✅ Test Created Successfully!</h3>
+            <p class="text-gray-700 mb-4">Test Code: <strong class="text-blue-600">${testCode}</strong></p>
+            <button onclick="this.parentElement.parentElement.remove()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+              Continue
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(successDiv);
+      
+      setTimeout(() => {
+        if (successDiv.parentElement) {
+          successDiv.remove();
+        }
+      }, 5000);
+      
+      navigate('/teacher/tests');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const currentQuestion = questions[activeQuestion];
@@ -395,10 +426,11 @@ const CreateTest: React.FC = () => {
           <div className="mt-6 flex justify-end">
             <button
               type="submit"
-              className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+              disabled={saving}
+              className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:bg-green-400 transition-colors"
             >
               <Save className="h-5 w-5" />
-              <span>Create Test</span>
+              <span>{saving ? 'Creating Test...' : 'Create Test'}</span>
             </button>
           </div>
         </form>

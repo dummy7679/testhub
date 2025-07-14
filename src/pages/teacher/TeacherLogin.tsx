@@ -1,52 +1,36 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, UserPlus } from 'lucide-react';
 import SOSELogo from '../../components/SOSELogo';
 import { useTeacher } from '../../contexts/TeacherContext';
 
 const TeacherLogin: React.FC = () => {
   const navigate = useNavigate();
-  const { setIsAuthenticated, setTeacher } = useTeacher();
+  const { signIn, loading } = useTeacher();
   const [formData, setFormData] = useState({
+    name: '',
+    subject: '',
     email: '',
     password: ''
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     try {
-      // Mock authentication - in real app, use Supabase
-      if (formData.email === 'teacher@sose.edu' && formData.password === 'password123') {
-        const mockTeacher = {
-          id: 'teacher-1',
-          email: 'teacher@sose.edu',
-          name: 'Ms. Priya Sharma',
-          subject: 'Mathematics',
-          school: 'SOSE Lajpat Nagar'
-        };
-
-        setTeacher(mockTeacher);
-        setIsAuthenticated(true);
-        
-        // Store auth state in localStorage for persistence
-        localStorage.setItem('teacherAuth', JSON.stringify({
-          isAuthenticated: true,
-          teacher: mockTeacher
-        }));
-        
-        navigate('/teacher/dashboard');
+      if (isSignUp) {
+        // For demo, we'll use the sign in method with predefined data
+        // In production, you'd implement proper sign up
+        await signIn(formData.email, formData.password);
       } else {
-        throw new Error('Invalid email or password');
+        await signIn(formData.email, formData.password);
       }
+        navigate('/teacher/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -69,10 +53,45 @@ const TeacherLogin: React.FC = () => {
         <div className="max-w-md mx-auto">
           <div className="bg-white rounded-lg shadow-lg p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-              Teacher Login
+              {isSignUp ? 'Create Teacher Account' : 'Teacher Login'}
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Name Field - Only for Sign Up */}
+              {isSignUp && (
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your full name"
+                    required={isSignUp}
+                  />
+                </div>
+              )}
+
+              {/* Subject Field - Only for Sign Up */}
+              {isSignUp && (
+                <div>
+                  <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    id="subject"
+                    value={formData.subject}
+                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., Mathematics, Science, English"
+                    required={isSignUp}
+                  />
+                </div>
+              )}
               {/* Email Field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -124,10 +143,23 @@ const TeacherLogin: React.FC = () => {
                 disabled={loading}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? (isSignUp ? 'Creating Account...' : 'Signing in...') : (isSignUp ? 'Create Account' : 'Sign In')}
               </button>
             </form>
 
+            {/* Toggle Sign Up/Sign In */}
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setError('');
+                }}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+              </button>
+            </div>
             {/* Demo Info */}
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-800">

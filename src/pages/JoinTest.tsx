@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, KeyRound, User } from 'lucide-react';
 import SOSELogo from '../components/SOSELogo';
+import { database } from '../lib/database';
 
 const JoinTest: React.FC = () => {
   const navigate = useNavigate();
@@ -27,9 +28,10 @@ const JoinTest: React.FC = () => {
         throw new Error('Please enter test code');
       }
 
-      // Mock validation - in real app, validate against Supabase
-      const validTestCodes = ['test123', 'demo123', 'math001', 'sci456', 'eng789'];
-      if (!validTestCodes.includes(formData.testCode.toLowerCase())) {
+      // Validate test code against database
+      const test = await database.getTestByCode(formData.testCode);
+      
+      if (!test) {
         throw new Error('Invalid test code or test has expired');
       }
 
@@ -125,14 +127,12 @@ const JoinTest: React.FC = () => {
             </form>
 
             {/* Demo Info */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>Demo Test Codes:</strong><br />
-                • TEST123 - Mathematics Mid-Term<br />
-                • DEMO123 - Sample Quiz<br />
-                • MATH001 - Algebra Test<br />
-                • SCI456 - Science Quiz<br />
-                • ENG789 - English Assessment
+            <div className="mt-6 p-4 bg-green-50 rounded-lg">
+              <p className="text-sm text-green-800">
+                <strong>How to join:</strong><br />
+                • Get the test code from your teacher<br />
+                • Enter your full name as it appears in records<br />
+                • Click "Join Test" to start
               </p>
             </div>
           </div>

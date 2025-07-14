@@ -2,80 +2,40 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Eye, BarChart3, FileDown, Trophy, BookOpen, Calendar, Users } from 'lucide-react';
 import SOSELogo from '../../components/SOSELogo';
+import { useTeacher } from '../../contexts/TeacherContext';
+import { database } from '../../lib/database';
 
 const AllTests: React.FC = () => {
   const navigate = useNavigate();
+  const { teacher } = useTeacher();
   const [tests, setTests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load tests from localStorage
-    const storedTests = JSON.parse(localStorage.getItem('tests') || '[]');
-    
-    // Add some mock tests if none exist
-    if (storedTests.length === 0) {
-      const mockTests = [
-        {
-          title: 'Mathematics Mid-Term Exam',
-          subject: 'Mathematics',
-          class: '10th A',
-          chapter: 'Algebra & Geometry',
-          testCode: 'TEST123',
-          createdAt: '2025-01-15T10:00:00Z',
-          timeLimit: 60,
-          questions: [
-            { type: 'mcq', marks: 2 },
-            { type: 'mcq', marks: 2 },
-            { type: 'short', marks: 3 },
-            { type: 'essay', marks: 5 }
-          ]
-        },
-        {
-          title: 'Science Chapter 5 Quiz',
-          subject: 'Science',
-          class: '10th A',
-          chapter: 'Light & Reflection',
-          testCode: 'SCI456',
-          createdAt: '2025-01-10T14:30:00Z',
-          timeLimit: 45,
-          questions: [
-            { type: 'mcq', marks: 1 },
-            { type: 'mcq', marks: 1 },
-            { type: 'short', marks: 2 }
-          ]
-        },
-        {
-          title: 'English Literature Assessment',
-          subject: 'English',
-          class: '10th A',
-          chapter: 'Poetry Analysis',
-          testCode: 'ENG789',
-          createdAt: '2025-01-08T09:00:00Z',
-          timeLimit: 90,
-          questions: [
-            { type: 'mcq', marks: 2 },
-            { type: 'essay', marks: 8 }
-          ]
-        }
-      ];
-      localStorage.setItem('tests', JSON.stringify(mockTests));
-      setTests(mockTests);
-    } else {
-      setTests(storedTests);
+    if (teacher) {
+      loadTests();
     }
-  }, []);
+  }, [teacher]);
+
+  const loadTests = async () => {
+    try {
+      if (!teacher) return;
+      const teacherTests = await database.getTeacherTests(teacher.id);
+      setTests(teacherTests);
+    } catch (error) {
+      console.error('Failed to load tests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getTotalMarks = (questions: any[]) => {
     return questions.reduce((total, q) => total + q.marks, 0);
   };
 
   const getSubmissionCount = (testCode: string) => {
-    // Mock submission count
-    const counts: { [key: string]: number } = {
-      'TEST123': 23,
-      'SCI456': 18,
-      'ENG789': 15
-    };
-    return counts[testCode] || 0;
+    // This would be loaded from database in real implementation
+    return Math.floor(Math.random() * 30) + 5; // Mock for now
   };
 
   const formatDate = (dateString: string) => {
@@ -184,7 +144,7 @@ const AllTests: React.FC = () => {
                         <div className="text-sm text-gray-500">{test.subject}</div>
                         {test.chapter && <div className="text-xs text-gray-400">Chapter: {test.chapter}</div>}
                         <div className="text-xs text-gray-400">
-                          Code: {test.testCode} • {test.questions.length} questions • {getTotalMarks(test.questions)} marks
+                          Code: {test.test_code} • {test.questions.length} questions • {getTotalMarks(test.questions)} marks
                         </div>
                       </div>
                     </td>
@@ -194,12 +154,12 @@ const AllTests: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-900">{formatDate(test.createdAt)}</span>
+                        <span className="text-sm text-gray-900">{formatDate(test.created_at)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {getSubmissionCount(test.testCode)} submissions
+                        {getSubmissionCount(test.test_code)} submissions
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -213,13 +173,14 @@ const AllTests: React.FC = () => {
                         </button>
                         <button
                           onClick={() => navigate(`/teacher/analytics/${test.testCode}`)}
+                          onClick={() => navigate(`/teacher/analytics/${test.id}`)}
                           className="text-purple-600 hover:text-purple-900 transition-colors"
                           title="Analytics"
                         >
                           <BarChart3 className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => navigate(`/teacher/rankings/${test.testCode}`)}
+                          onClick={() => navigate(`/teacher/rankings/${test.id}`)}
                           className="text-yellow-600 hover:text-yellow-900 transition-colors"
                           title="Rankings"
                         >

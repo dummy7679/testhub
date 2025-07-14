@@ -2,58 +2,63 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Download, Mail, Eye, User, Calendar } from 'lucide-react';
 import SOSELogo from '../../components/SOSELogo';
+import { useTeacher } from '../../contexts/TeacherContext';
+import { database } from '../../lib/database';
+import { reportGenerator } from '../../lib/reportGenerator';
 
 const ReportHub: React.FC = () => {
   const navigate = useNavigate();
+  const { teacher } = useTeacher();
   const [selectedTest, setSelectedTest] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [reportType, setReportType] = useState('individual');
   const [generatedReports, setGeneratedReports] = useState<any[]>([]);
+  const [tests, setTests] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const mockTests = [
-    { code: 'TEST123', title: 'Mathematics Mid-Term Exam' },
-    { code: 'SCI456', title: 'Science Chapter 5 Quiz' },
-    { code: 'ENG789', title: 'English Literature Assessment' }
-  ];
-
-  const mockStudents = [
-    { id: 1, name: 'Ananya Gupta', class: '10th A' },
-    { id: 2, name: 'Arjun Mehta', class: '10th A' },
-    { id: 3, name: 'Kavya Sharma', class: '10th A' },
-    { id: 4, name: 'Rohit Patel', class: '10th B' },
-    { id: 5, name: 'Sneha Joshi', class: '10th A' }
-  ];
-
-  const mockReports = [
-    {
-      id: 1,
-      type: 'individual',
-      studentName: 'Ananya Gupta',
-      testTitle: 'Mathematics Mid-Term Exam',
-      generatedAt: '2025-01-15T14:30:00Z',
-      pdfUrl: '/reports/ananya_math_report.pdf',
-      status: 'generated'
-    },
-    {
-      id: 2,
-      type: 'class',
-      testTitle: 'Science Chapter 5 Quiz',
-      generatedAt: '2025-01-15T15:00:00Z',
-      pdfUrl: '/reports/class_science_report.pdf',
-      status: 'generated'
-    },
-    {
-      id: 3,
-      type: 'individual',
-      studentName: 'Arjun Mehta',
-      testTitle: 'English Literature Assessment',
-      generatedAt: '2025-01-15T15:30:00Z',
-      pdfUrl: '/reports/arjun_english_report.pdf',
-      status: 'generated'
+  useEffect(() => {
+    if (teacher) {
+      loadTests();
     }
-  ];
+  }, [teacher]);
 
-  const handleGenerateReport = () => {
+  useEffect(() => {
+    if (selectedTest) {
+      loadStudents();
+    }
+  }, [selectedTest]);
+
+  const loadTests = async () => {
+    try {
+      if (!teacher) return;
+      const teacherTests = await database.getTeacherTests(teacher.id);
+      setTests(teacherTests);
+    } catch (error) {
+      console.error('Failed to load tests:', error);
+    }
+  };
+
+  const loadStudents = async () => {
+    try {
+      const submissions = await database.getTestSubmissions(selectedTest);
+      const uniqueStudents = submissions.reduce((acc: any[], sub) => {
+        if (!acc.find(s => s.name === sub.student_name)) {
+          acc.push({
+            id: sub.id,
+            name: sub.student_name,
+            class: tests.find(t => t.id === selectedTest)?.class || ''
+          });
+        }
+        return acc;
+      }, []);
+      setStudents(uniqueStudents);
+    } catch (error) {
+      console.error('Failed to load students:', error);
+    }
+  };
+
+  const handleGenerateReport = async () => {
     if (!selectedTest) {
       alert('Please select a test');
       return;
@@ -64,11 +69,13 @@ const ReportHub: React.FC = () => {
       return;
     }
 
+    setLoading(true);
+
     const newReport = {
       id: Date.now(),
       type: reportType,
-      studentName: reportType === 'individual' ? mockStudents.find(s => s.id.toString() === selectedStudent)?.name : null,
-      testTitle: mockTests.find(t => t.code === selectedTest)?.title,
+      studentName: reportType === 'individual' ? students.find(s => s.id.toString() === selectedStudent)?.name : null,
+      testTitle: tests.find(t => t.id === selectedTest)?.title,
       generatedAt: new Date().toISOString(),
       pdfUrl: `/reports/report_${Date.now()}.pdf`,
       status: 'generating'
@@ -76,19 +83,46 @@ const ReportHub: React.FC = () => {
 
     setGeneratedReports([newReport, ...generatedReports]);
 
-    // Simulate report generation
-    setTimeout(() => {
+    try {
+      const test = tests.find(t => t.id === selectedTest);
+      const submissions = await database.getTestSubmissions(selectedTest);
+      
+      let reportBlob: Blob;
+      let filename: string;
+      
+      if (reportType === 'individual') {
+        const submission = submissions.find(s => s.id.toString() === selectedStudent);
+        if (!submission) throw new Error('Submission not found');
+        
+        reportBlob = await reportGenerator.generateIndividualReport(test, submission, submissions);
+        filename = `${submission.student_name}_${test.title}_Report.pdf`;
+      } else {
+        reportBlob = await reportGenerator.generateClassReport(test, submissions);
+        filename = `${test.title}_Class_Report.pdf`;
+      }
+      
+      // Update report status
       setGeneratedReports(prev => prev.map(report => 
         report.id === newReport.id 
-          ? { ...report, status: 'generated' }
+          ? { ...report, status: 'generated', blob: reportBlob, filename }
           : report
       ));
-    }, 2000);
+      
+    } catch (error) {
+      console.error('Failed to generate report:', error);
+      alert('Failed to generate report. Please try again.');
+      setGeneratedReports(prev => prev.filter(report => report.id !== newReport.id));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDownloadReport = (report: any) => {
-    // Mock download
-    alert(`Downloading ${report.type} report for ${report.studentName || 'class'}...`);
+    if (report.blob && report.filename) {
+      reportGenerator.downloadReport(report.blob, report.filename);
+    } else {
+      alert('Report not ready for download');
+    }
   };
 
   const handleEmailReport = (report: any) => {
@@ -152,8 +186,8 @@ const ReportHub: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Choose a test...</option>
-                    {mockTests.map(test => (
-                      <option key={test.code} value={test.code}>
+                    {tests.map(test => (
+                      <option key={test.id} value={test.id}>
                         {test.title}
                       </option>
                     ))}
@@ -171,7 +205,7 @@ const ReportHub: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Choose a student...</option>
-                      {mockStudents.map(student => (
+                      {students.map(student => (
                         <option key={student.id} value={student.id}>
                           {student.name} - {student.class}
                         </option>
@@ -182,9 +216,10 @@ const ReportHub: React.FC = () => {
 
                 <button
                   onClick={handleGenerateReport}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={loading}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
                 >
-                  Generate Report
+                  {loading ? 'Generating...' : 'Generate Report'}
                 </button>
               </div>
             </div>
@@ -198,7 +233,7 @@ const ReportHub: React.FC = () => {
               </div>
               
               <div className="divide-y divide-gray-200">
-                {[...generatedReports, ...mockReports].map((report) => (
+                {generatedReports.map((report) => (
                   <div key={report.id} className="p-6 hover:bg-gray-50">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">

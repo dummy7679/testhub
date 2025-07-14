@@ -5,6 +5,7 @@ import { useTest } from '../contexts/TestContext';
 import SOSELogo from '../components/SOSELogo';
 import Timer from '../components/Timer';
 import QuestionRenderer from '../components/QuestionRenderer';
+import { database } from '../lib/database';
 
 const StartTest: React.FC = () => {
   const navigate = useNavigate();
@@ -23,71 +24,63 @@ const StartTest: React.FC = () => {
   } = useTest();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [testData, setTestData] = useState<any>(null);
 
-  // Mock test data
-  const mockTest = {
-    id: 'test-123',
-    title: testCode?.toUpperCase() === 'TEST123' ? 'Mathematics Mid-Term Exam' :
-           testCode?.toUpperCase() === 'DEMO123' ? 'Sample Quiz' :
-           testCode?.toUpperCase() === 'MATH001' ? 'Algebra Test' :
-           testCode?.toUpperCase() === 'SCI456' ? 'Science Quiz' :
-           testCode?.toUpperCase() === 'ENG789' ? 'English Assessment' : 'Sample Test',
-    subject: 'Mathematics',
-    chapter: 'Algebra & Geometry',
-    timeLimit: 3600, // 1 hour
-    questions: [
-      {
-        id: 'q1',
-        type: 'mcq' as const,
-        question: 'What is the value of x in the equation 2x + 5 = 15?',
-        options: ['3', '5', '10', '15'],
-        correct_answer: '5',
-        marks: 2
-      },
-      {
-        id: 'q2',
-        type: 'mcq' as const,
-        question: 'Which of the following is a prime number?',
-        options: ['4', '6', '9', '11'],
-        correct_answer: '11',
-        marks: 2
-      },
-      {
-        id: 'q3',
-        type: 'short' as const,
-        question: 'Solve for y: 3y - 7 = 14. Show your work.',
-        marks: 3
-      },
-      {
-        id: 'q4',
-        type: 'essay' as const,
-        question: 'Explain the Pythagorean theorem and provide an example of its application in real life.',
-        marks: 5
-      }
-    ]
-  };
 
   useEffect(() => {
-    // Initialize test
-    setCurrentTest(mockTest);
-    setTimeRemaining(mockTest.timeLimit);
-    setIsTestActive(true);
-    
-    // Get student name from localStorage
-    const studentName = localStorage.getItem('studentName');
-    if (!studentName) {
-      navigate('/test');
-    }
-  }, [setCurrentTest, setTimeRemaining, setIsTestActive, navigate]);
+    const loadTest = async () => {
+      try {
+        if (!testCode) return;
+        
+        const test = await database.getTestByCode(testCode);
+        if (!test) {
+          throw new Error('Test not found');
+        }
+        
+        setTestData(test);
+        setCurrentTest(test);
+        setTimeRemaining(test.time_limit * 60); // Convert minutes to seconds
+        setIsTestActive(true);
+        
+        // Get student name from localStorage
+        const studentName = localStorage.getItem('studentName');
+        if (!studentName) {
+          navigate('/test');
+        }
+      } catch (error) {
+        console.error('Failed to load test:', error);
+        navigate('/test');
+      }
+    };
+
+    loadTest();
+  }, [testCode, setCurrentTest, setTimeRemaining, setIsTestActive, navigate]);
 
   useEffect(() => {
     // Auto-submit when time runs out
-    if (timeRemaining <= 0) {
+    if (timeRemaining <= 0 && testData) {
       if (!isSubmitting) {
         handleSubmit();
       }
     }
-  }, [timeRemaining, isSubmitting]);
+  }, [timeRemaining, isSubmitting, testData]);
+
+  const calculateAutoScore = (answers: Record<string, string>) => {
+    if (!testData) return 0;
+    
+    let score = 0;
+    testData.questions.forEach((question: any) => {
+      if (question.type === 'mcq' && answers[question.id] === question.correct_answer) {
+        score += question.marks;
+      }
+    });
+    return score;
+  };
+
+  const getTotalMarks = () => {
+    if (!testData) return 0;
+    return testData.questions.reduce((total: number, q: any) => total + q.marks, 0);
+  };
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers(prev => ({
@@ -103,18 +96,28 @@ const StartTest: React.FC = () => {
     setIsTestActive(false);
 
     try {
-      // Mock submission
-      const submission = {
+      if (!testData) throw new Error('Test data not available');
+      
+      const autoScore = calculateAutoScore(answers);
+      const totalMarks = getTotalMarks();
+      
+      const submissionData = {
+        test_id: testData.id,
         studentName: localStorage.getItem('studentName'),
+        student_name: localStorage.getItem('studentName') || '',
         testCode,
         answers,
-        submittedAt: new Date().toISOString(),
+        auto_score: autoScore,
+        total_marks: totalMarks,
+        time_spent: Math.round((testData.time_limit * 60 - timeRemaining) / 60), // Convert to minutes
         tabSwitchCount,
-        timeSpent: mockTest.timeLimit - timeRemaining
+        tab_switch_count: tabSwitchCount,
+        ip_address: '', // Could be obtained from a service
+        status: 'submitted'
       };
 
-      // Store submission in localStorage for demo
-      localStorage.setItem(`submission_${testCode}`, JSON.stringify(submission));
+      // Submit to database
+      await database.submitTest(submissionData);
 
       navigate(`/test/submit/${testCode}`);
     } catch (error) {
@@ -131,7 +134,7 @@ const StartTest: React.FC = () => {
     return answers[questionId] && answers[questionId].trim() !== '';
   };
 
-  if (!currentTest) {
+  if (!testData || !currentTest) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -142,7 +145,7 @@ const StartTest: React.FC = () => {
     );
   }
 
-  const currentQ = currentTest.questions[currentQuestion];
+  const currentQ = testData.questions[currentQuestion];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -154,7 +157,7 @@ const StartTest: React.FC = () => {
               <SOSELogo className="h-8 w-8" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">{currentTest.title}</h1>
-                <p className="text-sm text-gray-600">{currentTest.subject} • {currentTest.chapter}</p>
+                <p className="text-sm text-gray-600">{currentTest.subject} {currentTest.chapter && `• ${currentTest.chapter}`}</p>
               </div>
             </div>
             
@@ -169,7 +172,7 @@ const StartTest: React.FC = () => {
               <Timer />
               
               <div className="text-sm text-gray-600">
-                {getAnsweredCount()} / {currentTest.questions.length} answered
+                {getAnsweredCount()} / {testData.questions.length} answered
               </div>
             </div>
           </div>
@@ -183,14 +186,14 @@ const StartTest: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm p-4 sticky top-24">
               <h3 className="font-semibold text-gray-900 mb-4">Question Navigation</h3>
               <div className="grid grid-cols-4 gap-2">
-                {currentTest.questions.map((_, index) => (
+                {testData.questions.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentQuestion(index)}
                     className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
                       index === currentQuestion
                         ? 'bg-blue-600 text-white'
-                        : isAnswered(currentTest.questions[index].id)
+                        : isAnswered(testData.questions[index].id)
                         ? 'bg-green-100 text-green-600'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
@@ -244,7 +247,7 @@ const StartTest: React.FC = () => {
               </button>
 
               <div className="flex space-x-4">
-                {currentQuestion === currentTest.questions.length - 1 ? (
+                {currentQuestion === testData.questions.length - 1 ? (
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
@@ -255,7 +258,7 @@ const StartTest: React.FC = () => {
                   </button>
                 ) : (
                   <button
-                    onClick={() => setCurrentQuestion(Math.min(currentTest.questions.length - 1, currentQuestion + 1))}
+                    onClick={() => setCurrentQuestion(Math.min(testData.questions.length - 1, currentQuestion + 1))}
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <span>Next</span>
