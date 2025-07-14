@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Code, BookOpen, X } from 'lucide-react';
+import { Eye, BookOpen, X } from 'lucide-react';
 
 interface LaTeXEditorProps {
   value: string;
@@ -66,8 +66,6 @@ const LaTeXEditor: React.FC<LaTeXEditorProps> = ({ value, onChange, placeholder 
       const end = textarea.selectionEnd;
       const newValue = value.substring(0, start) + symbol + value.substring(end);
       onChange(newValue);
-      
-      // Set cursor position after inserted symbol
       setTimeout(() => {
         textarea.focus();
         textarea.setSelectionRange(start + symbol.length, start + symbol.length);
@@ -135,7 +133,7 @@ const LaTeXEditor: React.FC<LaTeXEditorProps> = ({ value, onChange, placeholder 
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Preview
             </label>
-            <div 
+            <div
               className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 min-h-[120px]"
               dangerouslySetInnerHTML={{ __html: renderLatex(value) }}
             />
@@ -162,81 +160,35 @@ const LaTeXEditor: React.FC<LaTeXEditorProps> = ({ value, onChange, placeholder 
               <div>
                 <h4 className="font-semibold text-gray-900 mb-3">Basic Math</h4>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <code>x^2</code>
-                    <span>Superscript: x²</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>x_1</code>
-                    <span>Subscript: x₁</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\frac{a}{b}</code>
-                    <span>Fraction: a/b</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\sqrt{x}</code>
-                    <span>Square root: √x</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\sqrt[n]{x}</code>
-                    <span>nth root: ⁿ√x</span>
-                  </div>
+                  <div className="flex justify-between"><code>{'x^2'}</code><span>Superscript: x²</span></div>
+                  <div className="flex justify-between"><code>{'x_1'}</code><span>Subscript: x₁</span></div>
+                  <div className="flex justify-between"><code>{'\\frac{a}{b}'}</code><span>Fraction: a/b</span></div>
+                  <div className="flex justify-between"><code>{'\\sqrt{x}'}</code><span>Square root: √x</span></div>
+                  <div className="flex justify-between"><code>{'\\sqrt[n]{x}'}</code><span>nth root: ⁿ√x</span></div>
                 </div>
               </div>
 
-             {/* Advanced Math */}
-<div>
-  <h4 className="font-semibold text-gray-900 mb-3">Advanced Math</h4>
-  <div className="space-y-2 text-sm">
-    <div className="flex justify-between">
-      <code>\sum_{"{i=1}"}^{"{n}"}</code>
-      <span>Summation</span>
-    </div>
-    <div className="flex justify-between">
-      <code>\int_{"{a}"}^{"{b}"}</code>
-      <span>Integral</span>
-    </div>
-    <div className="flex justify-between">
-      <code>\lim_{"{x \\to 0}"}</code>
-      <span>Limit</span>
-    </div>
-    <div className="flex justify-between">
-      <code>\partial</code>
-      <span>Partial derivative</span>
-    </div>
-    <div className="flex justify-between">
-      <code>\infty</code>
-      <span>Infinity: ∞</span>
-    </div>
-  </div>
-</div>
-
+              {/* Advanced Math */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Advanced Math</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><code>{'\\sum_{i=1}^{n}'}</code><span>Summation</span></div>
+                  <div className="flex justify-between"><code>{'\\int_{a}^{b}'}</code><span>Integral</span></div>
+                  <div className="flex justify-between"><code>{'\\lim_{x \\to 0}'}</code><span>Limit</span></div>
+                  <div className="flex justify-between"><code>{'\\partial'}</code><span>Partial derivative</span></div>
+                  <div className="flex justify-between"><code>{'\\infty'}</code><span>Infinity: ∞</span></div>
+                </div>
+              </div>
 
               {/* Greek Letters */}
               <div>
                 <h4 className="font-semibold text-gray-900 mb-3">Greek Letters</h4>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <code>\alpha, \beta, \gamma</code>
-                    <span>α, β, γ</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\delta, \epsilon, \zeta</code>
-                    <span>δ, ε, ζ</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\theta, \lambda, \mu</code>
-                    <span>θ, λ, μ</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\pi, \sigma, \phi</code>
-                    <span>π, σ, φ</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\omega, \Omega</code>
-                    <span>ω, Ω</span>
-                  </div>
+                  <div className="flex justify-between"><code>{'\\alpha, \\beta, \\gamma'}</code><span>α, β, γ</span></div>
+                  <div className="flex justify-between"><code>{'\\delta, \\epsilon, \\zeta'}</code><span>δ, ε, ζ</span></div>
+                  <div className="flex justify-between"><code>{'\\theta, \\lambda, \\mu'}</code><span>θ, λ, μ</span></div>
+                  <div className="flex justify-between"><code>{'\\pi, \\sigma, \\phi'}</code><span>π, σ, φ</span></div>
+                  <div className="flex justify-between"><code>{'\\omega, \\Omega'}</code><span>ω, Ω</span></div>
                 </div>
               </div>
 
@@ -244,26 +196,11 @@ const LaTeXEditor: React.FC<LaTeXEditorProps> = ({ value, onChange, placeholder 
               <div>
                 <h4 className="font-semibold text-gray-900 mb-3">Symbols</h4>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <code>\pm, \mp</code>
-                    <span>±, ∓</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\leq, \geq</code>
-                    <span>≤, ≥</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\neq, \approx</code>
-                    <span>≠, ≈</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\times, \div</code>
-                    <span>×, ÷</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <code>\rightarrow, \leftarrow</code>
-                    <span>→, ←</span>
-                  </div>
+                  <div className="flex justify-between"><code>{'\\pm, \\mp'}</code><span>±, ∓</span></div>
+                  <div className="flex justify-between"><code>{'\\leq, \\geq'}</code><span>≤, ≥</span></div>
+                  <div className="flex justify-between"><code>{'\\neq, \\approx'}</code><span>≠, ≈</span></div>
+                  <div className="flex justify-between"><code>{'\\times, \\div'}</code><span>×, ÷</span></div>
+                  <div className="flex justify-between"><code>{'\\rightarrow, \\leftarrow'}</code><span>→, ←</span></div>
                 </div>
               </div>
             </div>
@@ -272,11 +209,11 @@ const LaTeXEditor: React.FC<LaTeXEditorProps> = ({ value, onChange, placeholder 
             <div className="mt-6">
               <h4 className="font-semibold text-gray-900 mb-3">Chemistry Examples</h4>
               <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
-                <div><code>H_2O</code> → H₂O</div>
-                <div><code>CO_2</code> → CO₂</div>
-                <div><code>Ca^{2+}</code> → Ca²⁺</div>
-                <div><code>SO_4^{2-}</code> → SO₄²⁻</div>
-                <div><code>\rightarrow</code> for reaction arrows</div>
+                <div><code>{'H_2O'}</code> → H₂O</div>
+                <div><code>{'CO_2'}</code> → CO₂</div>
+                <div><code>{'Ca^{2+}'}</code> → Ca²⁺</div>
+                <div><code>{'SO_4^{2-}'}</code> → SO₄²⁻</div>
+                <div><code>{'\\rightarrow'}</code> for reaction arrows</div>
               </div>
             </div>
 
@@ -284,11 +221,11 @@ const LaTeXEditor: React.FC<LaTeXEditorProps> = ({ value, onChange, placeholder 
             <div className="mt-6">
               <h4 className="font-semibold text-gray-900 mb-3">Physics Examples</h4>
               <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
-                <div><code>F = ma</code> → F = ma</div>
-                <div><code>E = mc^2</code> → E = mc²</div>
-                <div><code>v = \frac{d}{t}</code> → v = d/t</div>
-                <div><code>\Delta x</code> → Δx</div>
-                <div><code>\omega = 2\pi f</code> → ω = 2πf</div>
+                <div><code>{'F = ma'}</code> → F = ma</div>
+                <div><code>{'E = mc^2'}</code> → E = mc²</div>
+                <div><code>{'v = \\frac{d}{t}'}</code> → v = d/t</div>
+                <div><code>{'\\Delta x'}</code> → Δx</div>
+                <div><code>{'\\omega = 2\\pi f'}</code> → ω = 2πf</div>
               </div>
             </div>
           </div>
