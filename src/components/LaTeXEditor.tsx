@@ -198,7 +198,7 @@ const LaTeXEditor: React.FC<LaTeXEditorProps> = ({ value, onChange, placeholder 
                     <span>Integral</span>
                   </div>
                   <div className="flex justify-between">
-                    <code>\lim_{x \to 0}</code>
+                    <code>\\lim_{{x \\to 0}}</code>
                     <span>Limit</span>
                   </div>
                   <div className="flex justify-between">
