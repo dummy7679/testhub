@@ -39,6 +39,7 @@ const CreateTest: React.FC = () => {
   const [activeQuestion, setActiveQuestion] = useState(0);
 
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const addQuestion = () => {
     const newQuestion = {

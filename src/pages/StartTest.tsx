@@ -25,6 +25,7 @@ const StartTest: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [testData, setTestData] = useState<any>(null);
+  const [error, setError] = useState('');
 
 
   useEffect(() => {
